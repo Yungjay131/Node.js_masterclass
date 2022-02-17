@@ -1,0 +1,27 @@
+{
+  "name": "node.js_masterclass_with_express_and_mongodb",
+  "version": "1.0.0",
+  "description": "",
+  "main": "server.js",
+  "scripts": {
+    "start": "set NODE_ENV=production && nodemon server.js",
+    "start:dev": "nodemon server.js",
+    "start:d3v": "nodemon server.js"
+  },
+  "author": "Joshua Sylvanus",
+  "license": "ISC",
+  "devDependencies": {
+    "nodemon": "^2.0.15"
+  },
+  "dependencies": {
+    "colors": "^1.4.0",
+    "dotenv": "^10.0.0",
+    "express": "^4.17.1",
+    "mongoose": "^6.0.12",
+    "morgan": "^1.10.0"
+  },
+  "nodemonConfig": {
+    "restartable": "rs",
+    "delay": 2500
+  }
+}
