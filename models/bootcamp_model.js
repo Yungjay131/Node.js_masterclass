@@ -1,6 +1,8 @@
 const mongoose = require('mongoose');
 const slugify = require('slugify');
 const geocoder = require('../utils/geocoder.utils');
+const { model_names } = require('../utils/utils');
+
 
 /* creating a Schema */
 const BootcampSchema = new mongoose.Schema({
@@ -42,26 +44,23 @@ const BootcampSchema = new mongoose.Schema({
         required: [true, 'Please add an address']
     },
     /* GeoJson for location */
-    /*  location: {
-         type: {
-             type: String,
-             enum: ['Point'],
-             required: true
-         },
-         coordinates: { */
-    /* array of numbers */
-
-    /*    type: [Number],
-       required: true,
-       index: '2dsphere'
-   },
-   formattedAddress: String,
-   street: String,
-   city: String,
-   state: String,
-   zipcode: String,
-   country: String
-}, */
+    location: {
+        type: {
+            type: String,
+            enum: ['Point']
+        },
+        coordinates: {
+            /* array of numbers */
+            type: [Number],
+            index: '2dsphere'
+        },
+        formattedAddress: String,
+        street: String,
+        city: String,
+        state: String,
+        zipcode: String,
+        country: String
+    },
     careers: {
         /* array of Strings */
         type: [String],
@@ -106,16 +105,24 @@ const BootcampSchema = new mongoose.Schema({
     createdAt: {
         type: Date,
         default: Date.now
+    },
+    /* to associate an owner with each Bootcamp remember to set
+      in bootcamps_controller*/
+    user: {
+        type: mongoose.Schema.ObjectId,
+        ref: 'User',
+        required: true
     }
-
-});
+},
+    {
+        toJSON: { virtuals: true },
+        toObject: { virtuals: true }
+    });
 
 /* for testing pre and post middleware hooks 
 use anonymous functions because arrowfunctions handle this reference differently
 and this pre hooks use the 'this' reference*/
 BootcampSchema.pre('save', function (next) {
-    console.log('Slugify ran', this.name);
-
     /* referring to the slug field,remember this is for creating a more user-friendly version
     of a string */
     this.slug = slugify(this.name, { lower: true });
@@ -125,7 +132,6 @@ BootcampSchema.pre('save', function (next) {
 /* geocode and creat location field */
 BootcampSchema.pre('save', async function (next) {
     const _location = await geocoder.geocode(this.address);
-
     /* constructing the location field as geojson */
     this.location = {
         type: 'Point',
@@ -142,7 +148,27 @@ BootcampSchema.pre('save', async function (next) {
     this.address = undefined;
     next();
 });
+
+/* cascade delete courses when a bootcamp is deleted
+this would not work with findByIdAndDelete(); */
+BootcampSchema.pre('remove', async function (next) {
+    console.log(`courses being removed from bootcamp: ${this_id}`);
+
+    /* { bootcamp: this_id } remove only courses associated with this bootcamp*/
+    await this.model(model_names.COURSES).deleteMany({ bootcamp: this._id });
+    next();
+});
+
+/* for Reverse Populate, for virtuals, object getters and setters that dont get saved to the DB */
+/* used in boocamps_controller#getBootCamps() */
+BootcampSchema.virtual('courses', {
+    ref: model_names.COURSES,
+    localField: '_id',
+    foreignField: 'bootcamp',
+    justOne: false
+});
+
 /* to avoid it being scoped to the default connection, so export Schema instead */
 // const BootcampModel = mongoose.model('Bootcamp', BootcampSchema);
 
-module.exports = { BootcampSchema };
+module.exports = BootcampSchema;
